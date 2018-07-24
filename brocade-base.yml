@@ -1,0 +1,25 @@
+---
+- hosts: 'localhost'
+  gather_facts: no
+  tasks:
+  - name: "Add host to list"
+    add_host:
+      name: "{{ target_host }}"
+      groups: dynamic_hosts
+  vars_prompt:
+  - name: target_host
+    prompt: Enter target host IP
+    private: no
+- hosts: dynamic_hosts
+  connection: network_cli
+  become_method: enable
+  become: true
+  gather_facts: no
+  user: 'admin'
+  tasks:
+  - name: "get running config"
+    become: true
+    command: 'show run'
+    register: run_conf
+  - debug:
+      var: "{{ run_conf }}"

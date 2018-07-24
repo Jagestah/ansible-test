@@ -1,0 +1,21 @@
+---
+-
+  hosts: localhost
+  gather_facts: false
+  vars:
+    myConnection:
+      username: admin
+      password: $umm1t20ie
+      host: 10.4.20.5
+      transport: cli
+  tasks:
+    -
+      asa_command:
+        commands:
+          - show version
+        username: 'admin'
+        password: '$umm1t20ie'
+        host: 10.4.20.5
+      register: run_config
+    -
+      debug: "{{run_config}}"

@@ -1,0 +1,100 @@
+---
+-
+ hosts: "localhost"
+ user: jj
+ become: false
+ vars:
+   ans_user: jj
+ tasks:
+   -
+     lineinfile:
+       line: "BOOL_API_URL=\"http://boolio.nav.engineering/booleans\""
+       path: /etc/environment
+     name: "Add Environment Variable"
+     become: true
+   -
+     apt:
+       name: dirmngr
+       state: present
+     name: "Install dirmngr"
+     become: true
+   -
+     shell: "curl -sSL https://get.rvm.io | bash -s stable"
+     name: "Install RVM"
+   -
+     name: "Apt-get update"
+     shell: apt-get update
+     become: true
+   -
+     apt: "name={{item}} state=present"
+     name: "Install list of packages"
+     become: true
+     with_items:
+      - git
+      - nodejs
+      - libpq-dev
+      - gcc
+      - zlib1g-dev
+      - software-properties-common
+      - rake
+   - 
+     name: source bashrc
+     shell: source /home/{{ans_user}}/.bashrc && rvm install 2.3.1
+     args:
+       executable: /bin/bash
+   - 
+     shell: source /home/{{ans_user}}/.bashrc && rvm alias create default ruby-2.3.1
+     name: "Activate 2.3.1"
+     args:
+       executable: /bin/bash
+   - 
+     shell: source /home/{{ans_user}}/.rvm/scripts/rvm && rvm gemset use global && gem install bundle
+     name: "Gem Bundle"
+     args:
+       executable: /bin/bash
+   -
+     name: "Clone skills challenge app from github"
+     shell: "git clone https://github.com/navsmb/devops-skill-challenge"
+     args:
+       chdir: /home/{{ans_user}}
+   -
+     name: "Copy Secrets"
+     shell: "cp config/secrets.yml.example config/secrets.yml"
+     args:
+       chdir: /home/{{ans_user}}/devops-skill-challenge
+   -
+     name: "Go to devops-skill-challenge directory and bundle install"
+     shell: source /home/{{ans_user}}/.rvm/scripts/rvm && bundle install
+     args:
+       chdir: /home/{{ans_user}}/devops-skill-challenge
+       executable: /bin/bash
+   -
+     args:
+       chdir: /home/{{ans_user}}/devops-skill-challenge
+       executable: /bin/bash
+     name: "Start Foreman"
+     shell: source /home/{{ans_user}}/.rvm/scripts/rvm && foreman start
+     async: 15
+     poll: 0
+   -
+     name: "Wait for Foreman to start"
+     pause:
+       seconds: 10
+   -
+     name: "Rake Migrate"
+     shell: bin/rake db:migrate RAILS_ENV=development
+     args:
+      chdir: /home/{{ans_user}}/devops-skill-challenge
+   -
+     args:
+       chdir: /home/{{ans_user}}/devops-skill-challenge
+       executable: /bin/bash
+     name: "Stop Foreman"
+     shell: source /home/{{ans_user}}/.rvm/scripts/rvm && foreman stop
+     async: 10
+   -
+     args:
+       chdir: /home/{{ans_user}}/devops-skill-challenge
+       executable: /bin/bash
+     name: "Start Foreman"
+     shell: source /home/{{ans_user}}/.rvm/scripts/rvm && foreman start
